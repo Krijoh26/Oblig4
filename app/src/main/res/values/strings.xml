@@ -1,3 +1,11 @@
 <resources>
     <string name="app_name">Oblig4</string>
+    <string name="map_type">Map type</string>
+    <string name="normal">Normal</string>
+    <string name="delete">Delete all points</string>
+    <string name="quit">Quit</string>
+    <string name="satellite">Satellite</string>
+    <string name="hybrid">Hybrid</string>
+    <string name="terrain">Terrain</string>
+    <string name="none">None</string>
 </resources>
