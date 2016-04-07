@@ -1,89 +1,57 @@
 package com.example.kristinesjnst.oblig4;
 
-import android.app.ActionBar;
-import android.app.Activity;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Color;
-import android.location.Address;
-import android.location.Geocoder;
-import android.location.Location;
 import android.location.LocationManager;
-import android.os.AsyncTask;
-import android.support.v4.app.FragmentActivity;
-import android.support.v7.app.ActionBarActivity;
 import android.support.v7.app.AlertDialog;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
-
-import com.google.android.gms.common.api.GoogleApiClient;
-import com.google.android.gms.location.LocationServices;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
-import com.google.android.gms.maps.UiSettings;
 import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.android.gms.maps.model.Polyline;
 import com.google.android.gms.maps.model.PolylineOptions;
-
-import org.json.JSONObject;
-
-import java.io.IOException;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
 
-
-//    implements OnMapReadyCallback, GoogleMap.OnMapClickListener
-
-    private GoogleMap mMap;
-    private final int[] MAP_TYPES = {GoogleMap.MAP_TYPE_NORMAL,
-            GoogleMap.MAP_TYPE_HYBRID, GoogleMap.MAP_TYPE_SATELLITE,
-             GoogleMap.MAP_TYPE_TERRAIN, GoogleMap.MAP_TYPE_NONE};
-    private final int MAP_TYPE_NORMAL = 0;
-    private final int MAP_TYPE_HYBRID = 1;
-    private final int MAP_TYPE_SATELLITE = 2;
-    private final int MAP_TYPE_TERRAIN = 3;
-    private final int MAP_TYPE_NONE = 4;
-
-    //    private int currMapTypeIndex = 0;
-//    private GoogleApiClient mGoogleApiClient;
-//    private Location mCurrentLocation;
-//    private GoogleMap map;
-    private static final LatLng LOWER_MANHATTAN = new LatLng(40.722543, -73.998585);
-    private static final LatLng BROOKLYN_BRIDGE = new LatLng(40.7057, -73.9964);
-    private static final LatLng WALL_STREET = new LatLng(40.7064, -74.0094);
+    private GoogleMap googleMap;
     private LocationManager locationManager;
+    private ArrayList<LatLng> markerPoints = new ArrayList<>();
+    private SharedPreferences sharedPreferences;
+    private int count = 0;
+    private MarkerOptions options = new MarkerOptions();
+    private String zoom;
+    private ArrayList<Polyline> polylines = new ArrayList<>();
+    private final int[] MAP_TYPES = {GoogleMap.MAP_TYPE_NORMAL, GoogleMap.MAP_TYPE_HYBRID,
+            GoogleMap.MAP_TYPE_SATELLITE, GoogleMap.MAP_TYPE_TERRAIN, GoogleMap.MAP_TYPE_NONE};
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-
-
         SupportMapFragment supportMapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
-        mMap = supportMapFragment.getMap();
-        mMap.setOnMapClickListener(this);
+        googleMap = supportMapFragment.getMap();
+        googleMap.setOnMapClickListener(this);
+        googleMap.getUiSettings().setZoomControlsEnabled(true);
 
-        UiSettings uiSettings = mMap.getUiSettings();
-        uiSettings.setZoomControlsEnabled(true);
+        locationManager = (LocationManager)getSystemService(Context.LOCATION_SERVICE);
 
-        String serviceString = Context.LOCATION_SERVICE;
-        locationManager = (LocationManager)getSystemService(serviceString);
+        sharedPreferences = getSharedPreferences("location", 0);
+        count = sharedPreferences.getInt("locationCount", 0);
+        zoom = sharedPreferences.getString("zoom", "0");
 
-        onMapReady(mMap);
-
+        onMapReady(googleMap);
     }
 
     @Override
@@ -94,25 +62,31 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
+        int MAP_TYPE_NORMAL = 0;
+        int MAP_TYPE_HYBRID = 1;
+        int MAP_TYPE_SATELLITE = 2;
+        int MAP_TYPE_TERRAIN = 3;
+        int MAP_TYPE_NONE = 4;
+
         switch (item.getItemId()) {
             case R.id.normal:
-                onNavigationItemSelected(MAP_TYPE_NORMAL);
+                mapTypeSelected(MAP_TYPE_NORMAL);
                 isChecked(item);
                 return true;
             case R.id.hybrid:
-                onNavigationItemSelected(MAP_TYPE_HYBRID);
+                mapTypeSelected(MAP_TYPE_HYBRID);
                 isChecked(item);
                 return true;
             case R.id.satellite:
-                onNavigationItemSelected(MAP_TYPE_SATELLITE);
+                mapTypeSelected(MAP_TYPE_SATELLITE);
                 isChecked(item);
                 return true;
             case R.id.terrain:
-                onNavigationItemSelected(MAP_TYPE_TERRAIN);
+                mapTypeSelected(MAP_TYPE_TERRAIN);
                 isChecked(item);
                 return true;
             case R.id.none:
-                onNavigationItemSelected(MAP_TYPE_NONE);
+                mapTypeSelected(MAP_TYPE_NONE);
                 isChecked(item);
                 return true;
             case R.id.delete:
@@ -122,6 +96,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 quitDialog();
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    private boolean mapTypeSelected(int itemPosition) {
+        googleMap.setMapType(MAP_TYPES[itemPosition]);
+        return true;
     }
 
     private void isChecked(MenuItem item) {
@@ -134,55 +113,81 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-        mMap = googleMap;
-        MarkerOptions options = new MarkerOptions();
-        options.position(LOWER_MANHATTAN);
-        options.position(BROOKLYN_BRIDGE);
-        options.position(WALL_STREET);
-        mMap.addMarker(options);
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(BROOKLYN_BRIDGE, 13));
-        googleMap.addMarker(new MarkerOptions().position(BROOKLYN_BRIDGE).title("Brooklyn bridge"));
-        googleMap.addMarker(new MarkerOptions().position(LOWER_MANHATTAN).title("Lower manhattan"));
-        googleMap.addMarker(new MarkerOptions().position(WALL_STREET).title("Wall street"));
+        this.googleMap = googleMap;
+        loadPreferences();
     }
 
+    private void loadPreferences() {
+        if(count!=0) {
+            String lat = "";
+            String lng = "";
+            for(int i=0; i < count; i++) {
+                lat = sharedPreferences.getString("lat"+i,"0");
+                lng = sharedPreferences.getString("lng"+i,"0");
+                drawLines(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
+                options.position(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
+                options.icon(BitmapDescriptorFactory.defaultMarker());
+                googleMap.addMarker(options);
+            }
+            googleMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng))));
+            googleMap.animateCamera(CameraUpdateFactory.zoomTo(Float.parseFloat(zoom)));
+        }
+    }
+
+    private void drawLines(LatLng latLng) {
+        PolylineOptions polylineOptions = new PolylineOptions();
+        polylineOptions.color(Color.BLUE);
+        polylineOptions.width(5);
+        markerPoints.add(latLng);
+        polylineOptions.addAll(markerPoints);
+        googleMap.addPolyline(polylineOptions);
+        polylines.add(googleMap.addPolyline(polylineOptions));
+    }
 
     @Override
     public void onMapClick(LatLng latLng) {
-        MarkerOptions markerOptions = new MarkerOptions().position(latLng);
-        markerOptions.title(getAddressFromLatLng(latLng));
+        count++;
+        drawLines(latLng);
 
-        markerOptions.icon(BitmapDescriptorFactory.defaultMarker());
-        mMap.addMarker(markerOptions);
+        SharedPreferences.Editor editor = sharedPreferences.edit();
+        editor.putString("lat" + Integer.toString((count - 1)), Double.toString(latLng.latitude));
+        editor.putString("lng" + Integer.toString((count - 1)), Double.toString(latLng.longitude));
+        editor.putInt("locationCount", count);
+        editor.putString("zoom", Float.toString(googleMap.getCameraPosition().zoom));
+        editor.apply();
+        options.position(latLng);
+        options.icon(BitmapDescriptorFactory.defaultMarker());
+        googleMap.addMarker(options);
     }
 
-    private String getAddressFromLatLng(LatLng latLng) {
-        Geocoder geocoder = new Geocoder(getApplicationContext(), Locale.getDefault());
-        List<Address> addresses = null;
-        try {
-            addresses = geocoder.getFromLocation(latLng.latitude, latLng.longitude, 1);
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        if (addresses != null) {
-            return addresses.get(0).getAddressLine(0);
-        }
-        return null;
+    private void deleteDialog(){
+        AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+        alertDialog.setTitle("Delete");
+        alertDialog.setMessage("Are you sure you want to permanently delete all data? ");
+        alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "YES",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        googleMap.clear();
+                        SharedPreferences.Editor editor = sharedPreferences.edit();
+                        editor.clear();
+                        editor.apply();
+                        count=0;
+                        for(Polyline polyline : polylines) {
+                            polyline.remove();
+                        }
+                        polylines.clear();
+                    }
+                });
+        alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "NO",
+                new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int which) {
+                        dialog.dismiss();
+                    }
+                });
+        alertDialog.show();
     }
 
-    //    @Override
-    public boolean onNavigationItemSelected(int itemPosition) {
-        mMap.setMapType(MAP_TYPES[itemPosition]);
-
-        return (true);
-
-    }
-
-    public void deleteDialog(){
-//TODO: delete data from file.
-    }
-
-    public void quitDialog(){
+    private void quitDialog(){
         AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
         alertDialog.setTitle("Quit");
         alertDialog.setMessage("Are you sure you want to quit? ");
@@ -205,136 +210,22 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     protected void onResume() {
         super.onResume();
         if (!locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
-            //TODO: lag en dialogboks som spør om man ønsker å slå på gps.
-            startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+            AlertDialog alertDialog = new AlertDialog.Builder(MainActivity.this).create();
+            alertDialog.setTitle("Position");
+            alertDialog.setMessage("You need to turn on GPS");
+            alertDialog.setButton(AlertDialog.BUTTON_NEGATIVE, "OK",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            startActivity(new Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS));
+                        }
+                    });
+            alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "CANCEL",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            dialog.dismiss();
+                        }
+                    });
+            alertDialog.show();
         }
     }
 }
-
-//    private static final LatLng LOWER_MANHATTAN = new LatLng(40.722543,
-//            -73.998585);
-//    private static final LatLng BROOKLYN_BRIDGE = new LatLng(40.7057, -73.9964);
-//    private static final LatLng WALL_STREET = new LatLng(40.7064, -74.0094);
-//
-//    GoogleMap googleMap;
-//    final String TAG = "PathGoogleMapActivity";
-//
-//    @Override
-//    protected void onCreate(Bundle savedInstanceState) {
-//        super.onCreate(savedInstanceState);
-//        setContentView(R.layout.activity_main);
-//        SupportMapFragment fm = (SupportMapFragment) getSupportFragmentManager()
-//                .findFragmentById(R.id.map);
-//        googleMap = fm.getMap();
-//        UiSettings uiSettings = mMap.getUiSettings();
-//        uiSettings.setZoomControlsEnabled(true);
-//
-//        MarkerOptions options = new MarkerOptions();
-//        options.position(LOWER_MANHATTAN);
-//        options.position(BROOKLYN_BRIDGE);
-//        options.position(WALL_STREET);
-//        googleMap.addMarker(options);
-//        String url = getMapsApiDirectionsUrl();
-//        ReadTask downloadTask = new ReadTask();
-//        downloadTask.execute(url);
-//
-//        googleMap.moveCamera(CameraUpdateFactory.newLatLngZoom(BROOKLYN_BRIDGE,
-//                13));
-//        addMarkers();
-//
-//    }
-//
-//    private String getMapsApiDirectionsUrl() {
-//        String waypoints = "waypoints=optimize:true|"
-//                + LOWER_MANHATTAN.latitude + "," + LOWER_MANHATTAN.longitude
-//                + "|" + "|" + BROOKLYN_BRIDGE.latitude + ","
-//                + BROOKLYN_BRIDGE.longitude + "|" + WALL_STREET.latitude + ","
-//                + WALL_STREET.longitude;
-//
-//        String sensor = "sensor=false";
-//        String params = waypoints + "&" + sensor;
-//        String output = "json";
-//        String url = "https://maps.googleapis.com/maps/api/directions/"
-//                + output + "?" + params;
-//        return url;
-//    }
-//
-//    private void addMarkers() {
-//        if (googleMap != null) {
-//            googleMap.addMarker(new MarkerOptions().position(BROOKLYN_BRIDGE)
-//                    .title("First Point"));
-//            googleMap.addMarker(new MarkerOptions().position(LOWER_MANHATTAN)
-//                    .title("Second Point"));
-//            googleMap.addMarker(new MarkerOptions().position(WALL_STREET)
-//                    .title("Third Point"));
-//        }
-//    }
-//
-//    private class ReadTask extends AsyncTask<String, Void, String> {
-//        @Override
-//        protected String doInBackground(String... url) {
-//            String data = "";
-//            try {
-//                HttpConnection http = new HttpConnection();
-//                data = http.readUrl(url[0]);
-//            } catch (Exception e) {
-//                Log.d("Background Task", e.toString());
-//            }
-//            return data;
-//        }
-//
-//        @Override
-//        protected void onPostExecute(String result) {
-//            super.onPostExecute(result);
-//            new ParserTask().execute(result);
-//        }
-//    }
-//
-//    private class ParserTask extends AsyncTask<String, Integer, List<List<HashMap<String, String>>>> {
-//
-//        @Override
-//        protected List<List<HashMap<String, String>>> doInBackground(
-//                String... jsonData) {
-//
-//            JSONObject jObject;
-//            List<List<HashMap<String, String>>> routes = null;
-//
-//            try {
-//                jObject = new JSONObject(jsonData[0]);
-//                PathJSONParser parser = new PathJSONParser();
-//                routes = parser.parse(jObject);
-//            } catch (Exception e) {
-//                e.printStackTrace();
-//            }
-//            return routes;
-//        }
-//
-//        @Override
-//        protected void onPostExecute(List<List<HashMap<String, String>>> routes) {
-//            ArrayList<LatLng> points = null;
-//            PolylineOptions polyLineOptions = null;
-//
-//            // traversing through routes
-//            for (int i = 0; i < routes.size(); i++) {
-//                points = new ArrayList<LatLng>();
-//                polyLineOptions = new PolylineOptions();
-//                List<HashMap<String, String>> path = routes.get(i);
-//
-//                for (int j = 0; j < path.size(); j++) {
-//                    HashMap<String, String> point = path.get(j);
-//
-//                    double lat = Double.parseDouble(point.get("lat"));
-//                    double lng = Double.parseDouble(point.get("lng"));
-//                    LatLng position = new LatLng(lat, lng);
-//
-//                    points.add(position);
-//                }
-//
-//                polyLineOptions.addAll(points);
-//                polyLineOptions.width(2);
-//                polyLineOptions.color(Color.BLUE);
-//            }
-//
-//            googleMap.addPolyline(polyLineOptions);
-//        }
-//    }

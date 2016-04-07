@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Oblig4</string>
+    <string name="app_name">Google maps</string>
     <string name="map_type">Map type</string>
     <string name="normal">Normal</string>
     <string name="delete">Delete all points</string>
