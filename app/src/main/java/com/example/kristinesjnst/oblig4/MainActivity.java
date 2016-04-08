@@ -29,9 +29,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
     private ArrayList<LatLng> markerPoints = new ArrayList<>();
     private SharedPreferences sharedPreferences;
     private int count = 0;
-    private MarkerOptions options = new MarkerOptions();
+    private MarkerOptions markerOptions = new MarkerOptions();
     private String zoom;
-    private ArrayList<Polyline> polylines = new ArrayList<>();
+    private ArrayList<Polyline> polylineArrayList = new ArrayList<>();
     private final int[] MAP_TYPES = {GoogleMap.MAP_TYPE_NORMAL, GoogleMap.MAP_TYPE_HYBRID,
             GoogleMap.MAP_TYPE_SATELLITE, GoogleMap.MAP_TYPE_TERRAIN, GoogleMap.MAP_TYPE_NONE};
 
@@ -125,9 +125,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                 lat = sharedPreferences.getString("lat"+i,"0");
                 lng = sharedPreferences.getString("lng"+i,"0");
                 drawLines(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
-                options.position(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
-                options.icon(BitmapDescriptorFactory.defaultMarker());
-                googleMap.addMarker(options);
+                markerOptions.position(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng)));
+                markerOptions.icon(BitmapDescriptorFactory.defaultMarker());
+                googleMap.addMarker(markerOptions);
             }
             googleMap.moveCamera(CameraUpdateFactory.newLatLng(new LatLng(Double.parseDouble(lat), Double.parseDouble(lng))));
             googleMap.animateCamera(CameraUpdateFactory.zoomTo(Float.parseFloat(zoom)));
@@ -141,7 +141,7 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         markerPoints.add(latLng);
         polylineOptions.addAll(markerPoints);
         googleMap.addPolyline(polylineOptions);
-        polylines.add(googleMap.addPolyline(polylineOptions));
+        polylineArrayList.add(googleMap.addPolyline(polylineOptions));
     }
 
     @Override
@@ -155,9 +155,9 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
         editor.putInt("locationCount", count);
         editor.putString("zoom", Float.toString(googleMap.getCameraPosition().zoom));
         editor.apply();
-        options.position(latLng);
-        options.icon(BitmapDescriptorFactory.defaultMarker());
-        googleMap.addMarker(options);
+        markerOptions.position(latLng);
+        markerOptions.icon(BitmapDescriptorFactory.defaultMarker());
+        googleMap.addMarker(markerOptions);
     }
 
     private void deleteDialog(){
@@ -172,10 +172,11 @@ public class MainActivity extends AppCompatActivity implements OnMapReadyCallbac
                         editor.clear();
                         editor.apply();
                         count=0;
-                        for(Polyline polyline : polylines) {
+                        for(Polyline polyline : polylineArrayList) {
                             polyline.remove();
                         }
-                        polylines.clear();
+                        polylineArrayList.clear();
+                        markerPoints.clear();
                     }
                 });
         alertDialog.setButton(AlertDialog.BUTTON_NEUTRAL, "NO",
